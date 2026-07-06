@@ -1,5 +1,6 @@
 --[[
 	Juicebox :3
+	this is written by ai so ignore any bad code pls :)
 
 	local UI = Library.new("Window Title")
 
