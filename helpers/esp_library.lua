@@ -71,6 +71,8 @@ function ESP.Array.Build(self)
 	local cfg = esp._config
 	local render = self.rendered
 
+	self._elements = {}
+
 	render.box = Instance.new("Frame")
 	render.box.BackgroundTransparency = 1
 	render.box.Parent = sgui
@@ -90,91 +92,303 @@ function ESP.Array.Build(self)
 	render.out_stroke.Color = c3(0, 0, 0)
 	render.out_stroke.Parent = render.outline
 
-	render.healthback = Instance.new("Frame")
-	render.healthback.BackgroundColor3 = c3(0, 1, 0)
-	render.healthback.BorderSizePixel = 0
-	render.healthback.Parent = sgui
+	self:Add_Bar("health", "right")
 
-	render.health = Instance.new("Frame")
-	render.health.BackgroundColor3 = c3(0, 0, 0)
-	render.health.BorderSizePixel = 0
-	render.health.Parent = render.healthback
-
-	render.healthgrad = Instance.new("UIGradient")
-	render.healthgrad.Rotation = 90
-	render.healthgrad.Parent = render.healthback
-
-	render.name = Instance.new("TextLabel")
-	render.name.BackgroundTransparency = 1
-	render.name.TextStrokeTransparency = 0
-	render.name.FontFace = esp.font
-	render.name.TextSize = cfg.text.name_size or 12
-	render.name.TextColor3 = c3(1, 1, 1)
-	render.name.Parent = sgui
-
-	render.weapon = Instance.new("TextLabel")
-	render.weapon.BackgroundTransparency = 1
-	render.weapon.TextStrokeTransparency = 0
-	render.weapon.FontFace = esp.font
-	render.weapon.TextSize = cfg.text.weapon_size or 9
-	render.weapon.TextColor3 = c3(1, 1, 1)
-	render.weapon.Parent = sgui
-
-	render.flag_cont = Instance.new("Frame")
-	render.flag_cont.BackgroundTransparency = 1
-	render.flag_cont.BorderSizePixel = 0
-	render.flag_cont.Parent = sgui
-
-	render.flag_list = Instance.new("UIListLayout")
-	render.flag_list.Parent = render.flag_cont
-
-	local flags = self.flags
-
-	local function _make_flag(name, default_text)
-		local lbl = Instance.new("TextLabel")
-		lbl.Text = default_text or name
-		lbl.FontFace = esp.flag_font
-		lbl.TextSize = cfg.text.flag_size or 9
-		lbl.BackgroundTransparency = 1
-		lbl.TextStrokeTransparency = 0
-		lbl.TextColor3 = c3(1, 1, 1)
-		lbl.TextXAlignment = "Left"
-		lbl.Size = ud2(0, 0, 0, 10)
-		lbl.Parent = render.flag_cont
-		lbl.Visible = false
-		return lbl
-	end
-
-	flags.distance = _make_flag("distance", "0m")
-	flags.team = _make_flag("team", "")
-	flags.weapon_flag = _make_flag("weapon_flag", "")
+	self:Add_Text("name", "right")
+	self:Add_Text("weapon", "bottom")
+	self:Add_Text("distance", "right")
+	self:Add_Text("team", "right")
 
 	render.skeleton = {}
 	for i = 1, 14 do
-		render.skeleton[i] = Drawing.new("Line")
-		render.skeleton[i].Visible = false
+		local line = Instance.new("Frame")
+		line.BackgroundColor3 = c3(1, 1, 1)
+		line.BorderSizePixel = 0
+		line.AnchorPoint = Vector2.new(0.5, 0.5)
+		line.Visible = false
+		line.ZIndex = -1
+		line.Parent = sgui
+		render.skeleton[i] = line
+	end
+end
+
+function ESP.Array.Add_Bar(self, id, side)
+	local sgui = self.esp._sgui
+	local bg = Instance.new("Frame")
+	bg.BackgroundColor3 = c3(0, 1, 0)
+	bg.BorderSizePixel = 0
+	bg.Visible = false
+	bg.Parent = sgui
+
+	local fill = Instance.new("Frame")
+	fill.BackgroundColor3 = c3(0, 0, 0)
+	fill.BorderSizePixel = 0
+	fill.Visible = false
+	fill.Parent = bg
+
+	local outline = Instance.new("UIStroke")
+	outline.LineJoinMode = "Miter"
+	outline.Thickness = 1
+	outline.Color = c3(0, 0, 0)
+	outline.Parent = bg
+
+	local el = {
+		id = id,
+		type = "bar",
+		side = side,
+		rendered = { bg = bg, fill = fill, outline = outline },
+		_frac = 1,
+		_color = c3(0, 1, 0),
+		_bg = c3(0, 0, 0),
+	}
+
+	table.insert(self._elements, el)
+	return el
+end
+
+function ESP.Array.Add_Text(self, id, side)
+	local sgui = self.esp._sgui
+	local lbl = Instance.new("TextLabel")
+	lbl.BackgroundTransparency = 1
+	lbl.TextStrokeTransparency = 0
+	lbl.FontFace = self.esp.font
+	lbl.TextSize = 12
+	lbl.TextColor3 = c3(1, 1, 1)
+	lbl.TextXAlignment = "Center"
+	lbl.Visible = false
+	lbl.Parent = sgui
+
+    local outline = Instance.new("UIStroke")
+	outline.LineJoinMode = "Miter"
+	outline.Thickness = 1
+	outline.Color = c3(0, 0, 0)
+	outline.Parent = lbl
+
+	local el = {
+		id = id,
+		type = "text",
+		side = side,
+		rendered = { lbl = lbl, outline = outline },
+		_text = "",
+		_color = c3(1, 1, 1),
+	}
+
+	table.insert(self._elements, el)
+	return el
+end
+
+function ESP.Array.Update_Bar(self, id, fraction, color, bg_color)
+	local el = self:_find_element(id)
+	if not el then return end
+	el._frac = fraction
+	if color then el._color = color end
+	if bg_color then el._bg = bg_color end
+    if outline ~= nil then 
+        el.rendered.outline.Transparency = outline and 0 or not outline and 1
+    end
+end
+
+function ESP.Array.Update_Text(self, id, text, color, outline)
+	local el = self:_find_element(id)
+	if not el then return end
+	el._text = text or ""
+	if color then el._color = color end
+    if outline ~= nil then 
+        el.rendered.outline.Transparency = outline and 0 or not outline and 1
+    end
+end
+
+function ESP.Array.Set_Side(self, id, side)
+	local el = self:_find_element(id)
+	if el then el.side = side end
+end
+
+function ESP.Array.Remove_Element(self, id)
+	for i, el in ipairs(self._elements) do
+		if el.id == id then
+			for _, v in pairs(el.rendered) do
+				pcall(function() v:Destroy() end)
+			end
+			table.remove(self._elements, i)
+			return
+		end
+	end
+end
+
+function ESP.Array._find_element(self, id)
+	for _, el in ipairs(self._elements) do
+		if el.id == id then return el end
+	end
+	return nil
+end
+
+function ESP.Array.Layout(self, bx, by, bw, bh, vis)
+	local cfg = self.esp._config
+	local gap = 2
+	local bar_w = 2
+
+	local sides = { left = {}, right = {}, top = {}, bottom = {} }
+	for _, el in ipairs(self._elements) do
+		local bucket = sides[el.side]
+		if bucket then
+			if el.type == "bar" then
+				table.insert(bucket, el)
+			end
+		end
+	end
+	for _, el in ipairs(self._elements) do
+		local bucket = sides[el.side]
+		if bucket then
+			if el.type == "text" then
+				table.insert(bucket, el)
+			end
+		end
+	end
+
+	local lx = bx
+	local ly = by
+	for _, el in ipairs(sides.left) do
+		if el.type == "bar" then
+			lx = lx - bar_w - gap
+			el.rendered.bg.Position = ud2(0, lx, 0, by - 1)
+			el.rendered.bg.Size = ud2(0, bar_w, 0, bh + 2)
+			el.rendered.bg.BackgroundColor3 = el._bg
+			el.rendered.bg.Visible = vis
+			el.rendered.fill.Position = ud2(0, 0, 0, 0)
+			el.rendered.fill.Size = ud2(0, bar_w, 0, bh + 2 - (el._frac * (bh + 2)))
+			el.rendered.fill.BackgroundColor3 = el._color
+			el.rendered.fill.Visible = vis
+		else
+			el.rendered.lbl.Position = ud2(0, lx, 0, ly)
+			el.rendered.lbl.Size = ud2(0, 0, 0, 0)
+			el.rendered.lbl.Text = el._text
+			el.rendered.lbl.TextColor3 = el._color
+			el.rendered.lbl.TextXAlignment = "Right"
+			el.rendered.lbl.TextYAlignment = "Top"
+			el.rendered.lbl.Visible = vis and el._text ~= ""
+			el.rendered.lbl.Rotation = -90
+			ly = ly + 10
+		end
+	end
+
+	local rx = bx + bw
+	local ry = by
+	for _, el in ipairs(sides.right) do
+		if el.type == "bar" then
+			rx = rx + gap
+			el.rendered.bg.Position = ud2(0, rx, 0, by - 1)
+			el.rendered.bg.Size = ud2(0, bar_w, 0, bh + 2)
+			el.rendered.bg.BackgroundColor3 = el._bg
+			el.rendered.bg.Visible = vis
+			el.rendered.fill.Position = ud2(0, 0, 0, 0)
+			el.rendered.fill.Size = ud2(0, bar_w, 0, bh + 2 - (el._frac * (bh + 2)))
+			el.rendered.fill.BackgroundColor3 = el._color
+			el.rendered.fill.Visible = vis
+			rx = rx + bar_w
+		else
+			el.rendered.lbl.Position = ud2(0, rx + gap, 0, ry)
+			el.rendered.lbl.Size = ud2(0, 0, 0, 10)
+			el.rendered.lbl.Text = el._text
+			el.rendered.lbl.TextColor3 = el._color
+			el.rendered.lbl.TextXAlignment = "Left"
+			el.rendered.lbl.TextYAlignment = "Top"
+			el.rendered.lbl.Visible = vis and el._text ~= ""
+			el.rendered.lbl.Rotation = 0
+			ry = ry + 10
+		end
+	end
+
+	local ty = by
+	for i = #sides.top, 1, -1 do
+		local el = sides.top[i]
+		if el.type == "bar" then
+			ty = ty - bar_w - gap
+			el.rendered.bg.Position = ud2(0, bx - 1, 0, ty)
+			el.rendered.bg.Size = ud2(0, bw + 2, 0, bar_w)
+			el.rendered.bg.BackgroundColor3 = el._bg
+			el.rendered.bg.Visible = vis
+			el.rendered.fill.Position = ud2(0, 0, 0, 0)
+			el.rendered.fill.Size = ud2(0, bw + 2 - (el._frac * (bw + 2)), 0, bar_w)
+			el.rendered.fill.BackgroundColor3 = el._color
+			el.rendered.fill.Visible = vis
+		else
+			ty = ty - 10 - gap
+			el.rendered.lbl.Position = ud2(0, bx, 0, ty)
+			el.rendered.lbl.Size = ud2(0, bw, 0, 10)
+			el.rendered.lbl.Text = el._text
+			el.rendered.lbl.TextColor3 = el._color
+			el.rendered.lbl.TextXAlignment = "Center"
+			el.rendered.lbl.TextYAlignment = "Top"
+			el.rendered.lbl.Visible = vis and el._text ~= ""
+			el.rendered.lbl.Rotation = 0
+		end
+	end
+
+	local by2 = by + bh + gap
+	for _, el in ipairs(sides.bottom) do
+		if el.type == "bar" then
+			el.rendered.bg.Position = ud2(0, bx - 1, 0, by2)
+			el.rendered.bg.Size = ud2(0, bw + 2, 0, bar_w)
+			el.rendered.bg.BackgroundColor3 = el._bg
+			el.rendered.bg.Visible = vis
+			el.rendered.fill.Position = ud2(0, 0, 0, 0)
+			el.rendered.fill.Size = ud2(0, bw + 2 - (el._frac * (bw + 2)), 0, bar_w)
+			el.rendered.fill.BackgroundColor3 = el._color
+			el.rendered.fill.Visible = vis
+			by2 = by2 + bar_w + gap
+		else
+			el.rendered.lbl.Position = ud2(0, bx, 0, by2)
+			el.rendered.lbl.Size = ud2(0, bw, 0, 10)
+			el.rendered.lbl.Text = el._text
+			el.rendered.lbl.TextColor3 = el._color
+			el.rendered.lbl.TextXAlignment = "Center"
+			el.rendered.lbl.TextYAlignment = "Top"
+			el.rendered.lbl.Visible = vis and el._text ~= ""
+			el.rendered.lbl.Rotation = 0
+			by2 = by2 + 10 + gap
+		end
 	end
 end
 
 function ESP.Array.Remove(self)
-	for _, v in pairs(self.rendered) do
-		if v.Remove then
-			pcall(function() v:Remove() end)
-		else
+	for _, el in ipairs(self._elements) do
+		for _, v in pairs(el.rendered) do
 			pcall(function() v:Destroy() end)
 		end
 	end
-	for _, v in pairs(self.flags) do
-		pcall(function() v:Destroy() end)
+	self._elements = {}
+	if self.rendered.box then
+		pcall(function() self.rendered.box:Destroy() end)
+	end
+	if self.rendered.skeleton then
+		for _, sv in ipairs(self.rendered.skeleton) do
+			pcall(function() sv:Destroy() end)
+		end
 	end
 end
 
 function ESP.Array.Hide(self)
-	for _, v in pairs(self.rendered) do
-		if v.Visible ~= nil then
-			v.Visible = false
+	for _, el in ipairs(self._elements) do
+		for _, v in pairs(el.rendered) do
+			pcall(function() v.Visible = false end)
 		end
 	end
+	if self.rendered.box then
+		pcall(function() self.rendered.box.Visible = false end)
+	end
+	if self.rendered.skeleton then
+		for _, sv in ipairs(self.rendered.skeleton) do
+			pcall(function() sv.Visible = false end)
+		end
+	end
+end
+
+local function find_bone(char, name)
+	local part = char:FindFirstChild(name)
+	if part then return part end
+	local nospace = name:gsub(" ", "")
+	part = char:FindFirstChild(nospace)
+	return part
 end
 
 function ESP.Array.Update(self)
@@ -198,7 +412,7 @@ function ESP.Array.Update(self)
 		return true
 	end
 
-	local pos, size, vis = esp:_box_math(plr.Character.HumanoidRootPart)
+	local pos, size, vis = esp:_box_math(plr.Character.HumanoidRootPart, plr.Character, cfg.box.tight)
 
 	if cfg.distance.enabled and cfg.distance.max > 0 then
 		local dist = math.floor((cam.CFrame.Position - plr.Character.HumanoidRootPart.Position).Magnitude * 0.28)
@@ -213,18 +427,16 @@ function ESP.Array.Update(self)
 		return true
 	end
 
-	do
-		self.rendered.box.Position = ud2(0, pos.X, 0, pos.Y)
-		self.rendered.box.Size = ud2(0, size.X, 0, size.Y)
-		self.rendered.box.Visible = vis and cfg.box.enabled
+	self.rendered.box.Position = ud2(0, pos.X, 0, pos.Y)
+	self.rendered.box.Size = ud2(0, size.X, 0, size.Y)
+	self.rendered.box.Visible = vis and cfg.box.enabled
 
-		self.rendered.outline.Position = ud2(0, 1, 0, 1)
-		self.rendered.outline.Size = ud2(1, -2, 1, -2)
-		self.rendered.outline.Visible = vis and cfg.box.enabled
-		self.rendered.outline.ZIndex = -2
+	self.rendered.outline.Position = ud2(0, 1, 0, 1)
+	self.rendered.outline.Size = ud2(1, -2, 1, -2)
+	self.rendered.outline.Visible = vis and cfg.box.enabled
+	self.rendered.outline.ZIndex = -2
 
-		self.rendered.box_stroke.Color = cfg.box.color
-	end
+	self.rendered.box_stroke.Color = cfg.box.color
 
 	if cfg.skeleton.enabled and plr.Character then
 		local rigType = plr.Character:FindFirstChild("LowerTorso") and "R15" or "R6"
@@ -232,17 +444,23 @@ function ESP.Array.Update(self)
 		local lines = self.rendered.skeleton
 
 		for i, pair in ipairs(bones) do
-			local a = plr.Character:FindFirstChild(pair[1])
-			local b = plr.Character:FindFirstChild(pair[2])
+			local a = find_bone(plr.Character, pair[1])
+			local b = find_bone(plr.Character, pair[2])
 			if a and b and a:IsA("BasePart") and b:IsA("BasePart") then
 				local sa, va = cam:WorldToViewportPoint(a.Position)
 				local sb, vb = cam:WorldToViewportPoint(b.Position)
 				local line = lines[i]
 				if line and va and vb then
-					line.From = v2(sa.X, sa.Y)
-					line.To = v2(sb.X, sb.Y)
-					line.Color = cfg.skeleton.color
-					line.Thickness = cfg.skeleton.thickness
+					local dx = sb.X - sa.X
+					local dy = sb.Y - sa.Y
+					local dist = math.sqrt(dx * dx + dy * dy)
+					local angle = math.deg(math.atan2(dy, dx))
+					local cx = (sa.X + sb.X) * 0.5
+					local cy = (sa.Y + sb.Y) * 0.5
+					line.Position = ud2(0, cx, 0, cy)
+					line.Size = ud2(0, dist, 0, cfg.skeleton.thickness)
+					line.Rotation = angle
+					line.BackgroundColor3 = cfg.skeleton.color
 					line.Visible = vis
 				elseif line then
 					line.Visible = false
@@ -257,78 +475,38 @@ function ESP.Array.Update(self)
 		end
 	end
 
-	do
-		local lbl = self.rendered.name
-		lbl.Position = ud2(0, size.X / 2 + pos.X, 0, pos.Y + cfg.offsets.name_y)
-		lbl.Text = plr.Name
-		lbl.Visible = vis and cfg.name.enabled
+	self:Update_Bar("health",
+		plr.Character and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health / plr.Character.Humanoid.MaxHealth or 1,
+		cfg.health.color,
+		cfg.health.gradient and c3(1, 1, 1) or cfg.health.color, 
+        cfg.health.outline or false
+	)
+    
+	self:Update_Text("name",
+		cfg.name.enabled and plr.Name or "",
+		cfg.name.color_by_team and esp:_get_team_color(plr) or cfg.name.color
+	)
 
-		if cfg.name.color_by_team then
-			lbl.TextColor3 = esp:_get_team_color(plr)
-		else
-			lbl.TextColor3 = cfg.name.color
-		end
-	end
+	self:Update_Text("weapon",
+		cfg.weapon.enabled and esp:_get_weapon_name(plr) or "",
+		cfg.weapon.color
+	)
 
-	do
-		if alive and plr.Character and plr.Character:FindFirstChild("Humanoid") then
-			local hum = plr.Character.Humanoid
-			local back = self.rendered.healthback
-			local fill = self.rendered.health
-			local grad = self.rendered.healthgrad
+	local dist = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+		and math.floor((plr.Character.HumanoidRootPart.Position - cam.CFrame.Position).Magnitude * 0.28)
+		or 0
 
-			back.Position = ud2(0, pos.X + cfg.offsets.health_x, 0, pos.Y - 1)
-			back.Size = ud2(0, 1, 0, size.Y + 2)
+	self:Update_Text("distance",
+		cfg.flags.enabled and cfg.distance.enabled and table.find(cfg.flags.list, "distance") and (dist .. "m") or "",
+		cfg.distance.color
+	)
 
-			if cfg.health.gradient then
-				back.BackgroundColor3 = c3(1, 1, 1)
-				grad.Enabled = true
-				grad.Color = ColorSequence.new{
-					ColorSequenceKeypoint.new(0, cfg.health.color),
-					ColorSequenceKeypoint.new(1, cfg.health.gradient_color),
-				}
-			else
-				back.BackgroundColor3 = cfg.health.color
-				grad.Enabled = false
-			end
+	self:Update_Text("team",
+		cfg.flags.enabled and table.find(cfg.flags.list, "team") and (plr.Team and plr.Team.Name or "") or "",
+		esp:_get_team_color(plr)
+	)
 
-			back.Visible = vis and cfg.health.enabled
-
-			local health_fraction = hum.Health / hum.MaxHealth
-			fill.Position = ud2(0, 0, 0, 0)
-			fill.Size = ud2(0, 1, 0, size.Y - (health_fraction * size.Y))
-			fill.Visible = vis and cfg.health.enabled
-		else
-			self.rendered.health.Visible = false
-			self.rendered.healthback.Visible = false
-		end
-	end
-
-	do
-		local lbl = self.rendered.weapon
-		lbl.Position = ud2(0, size.X / 2 + pos.X, 0, pos.Y + size.Y + cfg.offsets.weapon_y)
-		lbl.Text = esp:_get_weapon_name(plr)
-		lbl.Visible = vis and cfg.weapon.enabled
-		lbl.TextColor3 = cfg.weapon.color
-	end
-
-	do
-		local cont = self.rendered.flag_cont
-		cont.Position = ud2(0, pos.X + size.X + cfg.offsets.flags_x, 0, pos.Y + cfg.offsets.flags_y)
-		cont.Size = ud2(0, 20, 0, 1000)
-		cont.Visible = vis and cfg.flags.enabled
-
-		local dist = plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
-			and math.floor((plr.Character.HumanoidRootPart.Position - cam.CFrame.Position).Magnitude * 0.28)
-			or 0
-
-		self.flags.distance.Text = dist .. "m"
-		self.flags.distance.Visible = cfg.flags.enabled and table.find(cfg.flags.list, "distance") ~= nil
-
-		self.flags.team.Text = plr.Team and plr.Team.Name or ""
-		self.flags.team.TextColor3 = esp:_get_team_color(plr)
-		self.flags.team.Visible = cfg.flags.enabled and table.find(cfg.flags.list, "team") ~= nil
-	end
+	self:Layout(pos.X, pos.Y, size.X, size.Y, vis)
 
 	return true
 end
@@ -338,7 +516,6 @@ function ESP.Create_Array(esp, player)
 		player = player,
 		character = player and player.Character,
 		rendered = {},
-		flags = {},
 		esp = esp,
 	}, ESP.Array)
 
@@ -395,6 +572,7 @@ function ESP:_default_config()
 		box = {
 			enabled = true,
 			color = c3(1, 1, 1),
+			tight = true,
 		},
 		name = {
 			enabled = true,
@@ -406,13 +584,14 @@ function ESP:_default_config()
 			color = c3(0, 1, 0),
 			gradient = false,
 			gradient_color = c3(1, 0, 0),
+            outline = false
 		},
 		weapon = {
 			enabled = true,
 			color = c3(1, 1, 1),
 		},
 		skeleton = {
-			enabled = false,
+			enabled = true,
 			color = c3(1, 1, 1),
 			thickness = 1,
 		},
@@ -462,8 +641,61 @@ function ESP:Configure(config)
 	self:_apply_config(config)
 end
 
-function ESP:_box_math(torso)
+function ESP:_box_math(torso, character, tight)
 	local cam = self._camera
+
+	if tight and character then
+		local minX, minY, minZ = math.huge, math.huge, math.huge
+		local maxX, maxY, maxZ = -math.huge, -math.huge, -math.huge
+		local any = false
+
+		for _, part in ipairs(character:GetChildren()) do
+			if part:IsA("BasePart") then
+				any = true
+				local p = part.Position
+				if p.X < minX then minX = p.X end
+				if p.Y < minY then minY = p.Y end
+				if p.Z < minZ then minZ = p.Z end
+				if p.X > maxX then maxX = p.X end
+				if p.Y > maxY then maxY = p.Y end
+				if p.Z > maxZ then maxZ = p.Z end
+			end
+		end
+
+		if not any then
+			return v2(0, 0), v2(0, 0), false
+		end
+
+		local corners = {
+			v3(minX, minY, minZ), v3(minX, minY, maxZ),
+			v3(minX, maxY, minZ), v3(minX, maxY, maxZ),
+			v3(maxX, minY, minZ), v3(maxX, minY, maxZ),
+			v3(maxX, maxY, minZ), v3(maxX, maxY, maxZ),
+		}
+
+		local sminX, sminY = math.huge, math.huge
+		local smaxX, smaxY = -math.huge, -math.huge
+
+		for _, corner in ipairs(corners) do
+			local sp, onScreen = cam:WorldToViewportPoint(corner)
+			if onScreen then
+				if sp.X < sminX then sminX = sp.X end
+				if sp.Y < sminY then sminY = sp.Y end
+				if sp.X > smaxX then smaxX = sp.X end
+				if sp.Y > smaxY then smaxY = sp.Y end
+			end
+		end
+
+		sminX = sminX - 1
+		sminY = sminY - 1
+		smaxX = smaxX + 1
+		smaxY = smaxY + 1
+
+		local w = math.max(math.floor(smaxX - sminX), 3)
+		local h = math.max(math.floor(smaxY - sminY), 3)
+		return v2(math.floor(sminX), math.floor(sminY)), v2(w, h), true
+	end
+
 	local vTop = torso.Position + (torso.CFrame.UpVector * self._config.offsets.box_up) + cam.CFrame.UpVector
 	local vBottom = torso.Position - (torso.CFrame.UpVector * self._config.offsets.box_down) - cam.CFrame.UpVector
 
