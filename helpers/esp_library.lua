@@ -37,6 +37,31 @@ local ESP = {
 }
 ESP.__index = ESP
 
+local R6_BONES = {
+	{"Head", "Torso"},
+	{"Torso", "Left Arm"},
+	{"Torso", "Right Arm"},
+	{"Torso", "Left Leg"},
+	{"Torso", "Right Leg"},
+}
+
+local R15_BONES = {
+	{"Head", "UpperTorso"},
+	{"UpperTorso", "LowerTorso"},
+	{"UpperTorso", "LeftUpperArm"},
+	{"LeftUpperArm", "LeftLowerArm"},
+	{"LeftLowerArm", "LeftHand"},
+	{"UpperTorso", "RightUpperArm"},
+	{"RightUpperArm", "RightLowerArm"},
+	{"RightLowerArm", "RightHand"},
+	{"LowerTorso", "LeftUpperLeg"},
+	{"LeftUpperLeg", "LeftLowerLeg"},
+	{"LeftLowerLeg", "LeftFoot"},
+	{"LowerTorso", "RightUpperLeg"},
+	{"RightUpperLeg", "RightLowerLeg"},
+	{"RightLowerLeg", "RightFoot"},
+}
+
 ESP.Array = {}
 ESP.Array.__index = ESP.Array
 
@@ -123,11 +148,21 @@ function ESP.Array.Build(self)
 	flags.distance = _make_flag("distance", "0m")
 	flags.team = _make_flag("team", "")
 	flags.weapon_flag = _make_flag("weapon_flag", "")
+
+	render.skeleton = {}
+	for i = 1, 14 do
+		render.skeleton[i] = Drawing.new("Line")
+		render.skeleton[i].Visible = false
+	end
 end
 
 function ESP.Array.Remove(self)
 	for _, v in pairs(self.rendered) do
-		pcall(function() v:Destroy() end)
+		if v.Remove then
+			pcall(function() v:Remove() end)
+		else
+			pcall(function() v:Destroy() end)
+		end
 	end
 	for _, v in pairs(self.flags) do
 		pcall(function() v:Destroy() end)
@@ -136,7 +171,7 @@ end
 
 function ESP.Array.Hide(self)
 	for _, v in pairs(self.rendered) do
-		if v:IsA("Frame") or v:IsA("TextLabel") then
+		if v.Visible ~= nil then
 			v.Visible = false
 		end
 	end
@@ -189,6 +224,37 @@ function ESP.Array.Update(self)
 		self.rendered.outline.ZIndex = -2
 
 		self.rendered.box_stroke.Color = cfg.box.color
+	end
+
+	if cfg.skeleton.enabled and plr.Character then
+		local rigType = plr.Character:FindFirstChild("LowerTorso") and "R15" or "R6"
+		local bones = rigType == "R15" and R15_BONES or R6_BONES
+		local lines = self.rendered.skeleton
+
+		for i, pair in ipairs(bones) do
+			local a = plr.Character:FindFirstChild(pair[1])
+			local b = plr.Character:FindFirstChild(pair[2])
+			if a and b and a:IsA("BasePart") and b:IsA("BasePart") then
+				local sa, va = cam:WorldToViewportPoint(a.Position)
+				local sb, vb = cam:WorldToViewportPoint(b.Position)
+				local line = lines[i]
+				if line and va and vb then
+					line.From = v2(sa.X, sa.Y)
+					line.To = v2(sb.X, sb.Y)
+					line.Color = cfg.skeleton.color
+					line.Thickness = cfg.skeleton.thickness
+					line.Visible = vis
+				elseif line then
+					line.Visible = false
+				end
+			elseif lines[i] then
+				lines[i].Visible = false
+			end
+		end
+	else
+		for _, line in ipairs(self.rendered.skeleton) do
+			line.Visible = false
+		end
 	end
 
 	do
@@ -345,6 +411,11 @@ function ESP:_default_config()
 			enabled = true,
 			color = c3(1, 1, 1),
 		},
+		skeleton = {
+			enabled = false,
+			color = c3(1, 1, 1),
+			thickness = 1,
+		},
 		distance = {
 			enabled = true,
 			color = c3(1, 1, 1),
@@ -500,6 +571,9 @@ function ESP:Stop()
 		self._connections.render = nil
 	end
 	self._running = false
+	for _, arr in pairs(self.arrays) do
+		arr:Hide()
+	end
 end
 
 function ESP:Destroy()
