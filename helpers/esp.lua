@@ -530,6 +530,3 @@ function ESP:IsRunning()
 end
 
 return ESP
-
-task.wait(10)
-esp:Destroy()
