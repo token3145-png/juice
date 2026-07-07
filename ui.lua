@@ -1,6 +1,5 @@
 --[[
-	Juicebox :3
-	this is written by ai so ignore any bad code pls :)
+	Juicebox UI Library
 
 	local UI = Library.new("Window Title")
 
@@ -40,6 +39,15 @@
 	UI:CreateColorPicker(sec, { name, default, flag, callback })
 	UI:RegisterKeybindLabel(flag, name)
 	UI:CreateTextBox(sec, { name, default, placeholder, flag })
+
+	--- Theme ---
+	Accent = Color3
+	BgDark = Color3
+	BgMid = Color3
+	BgLight = Color3
+	StrokeColor = Color3
+	TextBright = Color3
+	TextDim = Color3
 ]]
 
 local Accent = Color3.fromRGB(74, 199, 224)
@@ -132,6 +140,7 @@ local Library = {
 	},
 	_themeObjects = {},
 }
+
 Library.__index = Library
 
 local function theme_value(data)
@@ -2049,143 +2058,133 @@ function Library:SetWatermark(text)
 	if text and text ~= "" then self:CreateWatermark(text) end
 end
 
-function Library:AddPreviewRig(parent)
+function Library:AddPreviewRig(parent, userId)
+	local Players = game:GetService("Players")
+	local Lighting = game:GetService("Lighting")
+
 	local container = Create("Frame", parent, nil, {
 		BorderSizePixel = 0, BackgroundColor3 = BgMid,
 		Size = UDim2.new(1, 0, 0, 200), BackgroundTransparency = 1,
-		BorderColor3 = Color3.fromRGB(0, 0, 0),
 	})
+	Create("UIStroke", container, nil, { Color = StrokeColor, LineJoinMode = Enum.LineJoinMode.Miter })
+	Create("UIStroke", container, nil, { ZIndex = 0, Thickness = 2, LineJoinMode = Enum.LineJoinMode.Miter })
+
 	local vp = Create("ViewportFrame", container, "PreviewRig", {
 		BorderSizePixel = 0, BackgroundColor3 = BgMid,
-		Size = UDim2.new(1, 0, 1, 0), BorderColor3 = Color3.fromRGB(0, 0, 0),
+		Size = UDim2.new(1, 0, 1, 0),
 	})
-	Create("UIStroke", vp, nil, { ZIndex = 0, Thickness = 2, LineJoinMode = Enum.LineJoinMode.Miter })
 	Create("UIStroke", vp, nil, { Color = StrokeColor, LineJoinMode = Enum.LineJoinMode.Miter })
+	Create("UIStroke", vp, nil, { ZIndex = 0, Thickness = 2, LineJoinMode = Enum.LineJoinMode.Miter })
 
 	local worldModel = Instance.new("WorldModel", vp)
-	worldModel.WorldPivot = CFrame.new(Vector3.new(0, -3, -5), Vector3.new(0, 0, -1))
-
-	local rig = Instance.new("Model", worldModel)
-	rig.Name = "Rig"
-	rig.WorldPivot = CFrame.new(Vector3.new(0, 0, -8), Vector3.new(0, 0, -1))
-
-	local head = Instance.new("Part", rig)
-	head.Name = "Head"
-	head.Size = Vector3.new(2, 1, 1)
-	head.CFrame = CFrame.new(Vector3.new(0, 1.5, -8))
-	head.TopSurface = Enum.SurfaceType.Smooth
-	head.Color = Color3.fromRGB(128, 128, 128)
-	Instance.new("SpecialMesh", head).Scale = Vector3.new(1.25, 1.25, 1.25)
-	local face = Instance.new("Decal", head)
-	face.Name = "face"
-	face.Texture = "rbxasset://textures/face.png"
-
-	local torso = Instance.new("Part", rig)
-	torso.Name = "Torso"
-	torso.Size = Vector3.new(2, 2, 1)
-	torso.CFrame = CFrame.new(Vector3.new(0, 0, -8))
-	torso.RightSurface = Enum.SurfaceType.Weld
-	torso.LeftSurface = Enum.SurfaceType.Weld
-	torso.Color = Color3.fromRGB(128, 128, 128)
-
-	local leftArm = Instance.new("Part", rig)
-	leftArm.Name = "Left Arm"
-	leftArm.Size = Vector3.new(1, 2, 1)
-	leftArm.CFrame = CFrame.new(Vector3.new(-1.5, 0, -8))
-	leftArm.CanCollide = false
-	leftArm.Color = Color3.fromRGB(128, 128, 128)
-
-	local rightArm = Instance.new("Part", rig)
-	rightArm.Name = "Right Arm"
-	rightArm.Size = Vector3.new(1, 2, 1)
-	rightArm.CFrame = CFrame.new(Vector3.new(1.5, 0, -8))
-	rightArm.CanCollide = false
-	rightArm.Color = Color3.fromRGB(128, 128, 128)
-
-	local leftLeg = Instance.new("Part", rig)
-	leftLeg.Name = "Left Leg"
-	leftLeg.Size = Vector3.new(1, 2, 1)
-	leftLeg.CFrame = CFrame.new(Vector3.new(-0.5, -2, -8))
-	leftLeg.BottomSurface = Enum.SurfaceType.Smooth
-	leftLeg.CanCollide = false
-	leftLeg.Color = Color3.fromRGB(128, 128, 128)
-
-	local rightLeg = Instance.new("Part", rig)
-	rightLeg.Name = "Right Leg"
-	rightLeg.Size = Vector3.new(1, 2, 1)
-	rightLeg.CFrame = CFrame.new(Vector3.new(0.5, -2, -8))
-	rightLeg.BottomSurface = Enum.SurfaceType.Smooth
-	rightLeg.CanCollide = false
-	rightLeg.Color = Color3.fromRGB(128, 128, 128)
-
-	local hrp = Instance.new("Part", rig)
-	hrp.Name = "HumanoidRootPart"
-	hrp.Size = Vector3.new(2, 2, 1)
-	hrp.CFrame = CFrame.new(Vector3.new(0, 0, -8))
-	hrp.Transparency = 1
-	hrp.CanCollide = false
-
-	local humanoid = Instance.new("Humanoid", rig)
-	humanoid.RigType = Enum.HumanoidRigType.R15
-	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
-	humanoid.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
-	Instance.new("Animator", humanoid)
-
-	local function motor(part0, part1, c0, c1, name)
-		local m = Instance.new("Motor6D", part0)
-		m.Name = name
-		m.Part0 = part0
-		m.Part1 = part1
-		m.C0 = c0
-		m.C1 = c1
-		m.MaxVelocity = 0.1
-		return m
+	for _, obj in ipairs(Lighting:GetChildren()) do
+		if obj:IsA("Sky") or obj:IsA("Atmosphere") then
+			obj:Clone().Parent = worldModel
+		end
 	end
 
-	motor(torso, head, CFrame.new(0, 1, 0) * CFrame.Angles(0, math.pi, 0), CFrame.new(0, -0.5, 0) * CFrame.Angles(0, math.pi, 0), "Neck")
-	motor(torso, leftArm, CFrame.new(-1, 0.5, 0), CFrame.new(0.5, 0.5, 0), "Left Shoulder")
-	motor(torso, rightArm, CFrame.new(1, 0.5, 0), CFrame.new(-0.5, 0.5, 0), "Right Shoulder")
-	motor(torso, leftLeg, CFrame.new(-1, -1, 0), CFrame.new(-0.5, 1, 0), "Left Hip")
-	motor(torso, rightLeg, CFrame.new(1, -1, 0), CFrame.new(0.5, 1, 0), "Right Hip")
-	motor(hrp, torso, CFrame.new(0, 0, 0) * CFrame.Angles(0, math.pi, 0), CFrame.new(0, 0, 0) * CFrame.Angles(0, math.pi, 0), "RootJoint")
+	local id = userId and tonumber(userId) or game.Players.LocalPlayer.UserId
+	local rig = nil
+	local humanoid = nil
+
+	local ok, model = pcall(function()
+		return Players:CreateHumanoidModelFromUserId(id)
+	end)
+
+	if ok and model then
+		rig = model
+		rig.Parent = worldModel
+		rig:MoveTo(Vector3.new(0, 1.5, -8))
+
+		for _, obj in ipairs(rig:GetDescendants()) do
+			if obj:IsA("BasePart") then
+				obj.Anchored = true
+				obj.CanCollide = false
+			end
+		end
+
+		humanoid = rig:FindFirstChildOfClass("Humanoid")
+	end
+
+	if not rig then
+		rig = Instance.new("Model", worldModel)
+		rig.Name = "Fallback"
+		local t = Instance.new("Part", rig)
+		t.Size = Vector3.new(2, 2, 1)
+		t.Anchored = true
+		t.Color = Color3.fromRGB(128, 128, 128)
+		t.CFrame = CFrame.new(0, 0, -8)
+		local h = Instance.new("Part", rig)
+		h.Size = Vector3.new(2, 1, 1)
+		h.Anchored = true
+		h.Color = Color3.fromRGB(128, 128, 128)
+		h.CFrame = CFrame.new(0, 1.5, -8)
+		Instance.new("SpecialMesh", h).Scale = Vector3.new(1.25, 1.25, 1.25)
+		Instance.new("Decal", h).Texture = "rbxasset://textures/face.png"
+		humanoid = Instance.new("Humanoid", rig)
+		humanoid.RigType = Enum.HumanoidRigType.R6
+		Instance.new("Animator", humanoid)
+	end
+
+	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
+	humanoid.HealthDisplayType = Enum.HumanoidHealthDisplayType.AlwaysOff
+
+	local anim = Instance.new("Animation")
+	anim.AnimationId = "rbxassetid://180435571"
+	local track = humanoid:LoadAnimation(anim)
+	if track then
+		track.Looped = true
+		track:Play()
+	end
 
 	local cam = Instance.new("Camera", vp)
-	cam.CFrame = CFrame.new(Vector3.new(0, -2, 2), Vector3.new(0, 1.5, -8))
 	vp.CurrentCamera = cam
 
-	local angle = 0
+	local angle, pitch, radius = 0, -0.3, 6
 	local rotSpeed = 0.3
-	local dragging = false
-	local dragStart = nil
-	local startAngle = 0
+	local dragging, dragStart, startAngle, startPitch = false, nil, 0, 0
+
+	local function cam_update()
+		local cp = math.clamp(pitch, -1.4, 1.4)
+		local x = math.sin(angle) * math.cos(cp) * radius
+		local y = math.sin(cp) * radius
+		local z = math.cos(angle) * math.cos(cp) * radius - 8
+		cam.CFrame = CFrame.new(Vector3.new(x, y, z), Vector3.new(0, 0, -8))
+	end
+
+	cam_update()
 
 	self:AddConnection(game:GetService("RunService").Heartbeat:Connect(function(dt)
 		if not dragging then angle = angle + rotSpeed * dt end
-		local radius = 6
-		local x = math.sin(angle) * radius
-		local z = math.cos(angle) * radius
-		cam.CFrame = CFrame.new(Vector3.new(x, 0, -8 + z), Vector3.new(0, 0, -8))
+		cam_update()
 	end))
 
 	vp.InputBegan:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+        if input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch then
 			self._vpDragging = true
 			dragging = true
 			dragStart = input.Position
 			startAngle = angle
+			startPitch = pitch
 		end
 	end)
+
 	self:AddConnection(UIS.InputEnded:Connect(function(input)
-		if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+		if input.UserInputType == Enum.UserInputType.MouseButton1
+			or input.UserInputType == Enum.UserInputType.Touch then
 			self._vpDragging = false
 			dragging = false
 		end
 	end))
+
 	self:AddConnection(UIS.InputChanged:Connect(function(input)
-		if not dragging then return end
-		if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
+		if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement
+			or input.UserInputType == Enum.UserInputType.Touch) then
 			local delta = input.Position - dragStart
 			angle = startAngle - delta.X * 0.01
+			pitch = startPitch + delta.Y * 0.01
+			cam_update()
 		end
 	end))
 
